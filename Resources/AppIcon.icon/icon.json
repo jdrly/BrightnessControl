@@ -1,0 +1,48 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.13000,0.19000,0.40000,1.00000"
+  },
+  "groups" : [
+    {
+      "name" : "rays",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.4
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      },
+      "layers" : [
+        {
+          "image-name" : "rays.svg",
+          "name" : "rays"
+        }
+      ]
+    },
+    {
+      "name" : "disc",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      },
+      "layers" : [
+        {
+          "image-name" : "disc.svg",
+          "name" : "disc"
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
