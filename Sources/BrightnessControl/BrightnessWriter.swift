@@ -28,8 +28,15 @@ final class BrightnessWriter: @unchecked Sendable {
     /// The first monitor's brightness in percent, or nil when no monitor answers.
     func read(_ completion: @escaping @Sendable (Int?) -> Void) {
         queue.async {
-            let value = self.currentServices().lazy.compactMap { DDC.read($0, vcp: DDC.luminance) }.first
-            completion(value.map { Int((Double($0.current) / Double($0.max) * 100).rounded()) })
+            // Reads once per monitor: a lazy compactMap reads twice and crashes when a monitor
+            // answers only the first time, which the HP Z27xs G3 sometimes does.
+            for service in self.currentServices() {
+                if let value = DDC.read(service, vcp: DDC.luminance) {
+                    completion(Int((Double(value.current) / Double(value.max) * 100).rounded()))
+                    return
+                }
+            }
+            completion(nil)
         }
     }
 

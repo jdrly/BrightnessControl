@@ -2,15 +2,16 @@
 
 A menu bar slider for an external monitor's brightness on Apple silicon Macs. It sends DDC/CI commands to the monitor over the cable, so it changes the same backlight setting as the buttons on the monitor.
 
-<img src="docs/panel.png" width="346" alt="The BrightnessControl panel with the brightness slider, Light, Dark and Auto buttons, the Open at Login switch and a quit button">
+<img src="docs/panel.png" width="300" alt="The BrightnessControl panel with the brightness slider, Light, Dark and Auto buttons, the Keep Awake controls, the Open at Login switch and a quit button">
 
 The panel has:
 
 - a brightness slider from 0 to 100 in steps of 10
 - Light, Dark and Auto buttons for the macOS appearance
+- a Keep Awake switch that holds the display and Mac, or only the Mac, awake for 1 to 12 hours
 - an Open at Login switch
 
-I wrote it because I wanted one slider for my HP monitor and nothing else.
+I wrote it because I wanted one slider for my HP monitor. Then I kept adding the other things I reach for.
 
 ## Requirements
 
@@ -29,13 +30,15 @@ The app keeps running, since a menu bar icon has to belong to a running app. At 
 
 Moving the slider sends a DDC "set luminance" command, VCP code `0x10`, through `IOAVServiceWriteI2C`. That's a private IOKit function on Apple silicon, the same one [m1ddc](https://github.com/waydabber/m1ddc) calls. You don't need m1ddc installed. A monitor takes tens of milliseconds to process each write, and some lock up when flooded. The app sends only the latest value and waits 100 ms between writes.
 
-Plenty of monitors don't answer DDC reads. My HP Z27xs G3 returns an empty reply. When the read fails, the slider starts at the last value the app sent.
+Plenty of monitors don't answer DDC reads. My HP Z27xs G3 nearly always returns an empty reply. When the read fails, the slider starts at the last value the app sent.
 
 With more than one external monitor, the slider sets all of them to the same value.
 
 The appearance buttons call `SLSSetAppearanceThemeLegacy` and `SLSSetAppearanceThemeSwitchesAutomatically` from SkyLight, the private functions System Settings uses. Scripting System Events would trigger an Automation permission prompt. These calls don't. The buttons follow changes made in System Settings and Auto's switch at sunset.
 
-Both features rest on private APIs, and any macOS update can break them. I test each release on the current macOS 27.
+Brightness and appearance rest on private APIs, and any macOS update can break them. I test each release on the current macOS 27.
+
+Keep Awake runs the system's `caffeinate` with `-i -s`, plus `-d` when the display should stay on too. `-t` sets the duration. `-w` passes the app's pid, so `caffeinate` exits if the app quits or crashes. The sun in the menu bar turns fully lit while it's on. It doesn't come back on after a relaunch. `-s` only works on power, so on battery the Mac stays awake through `-i` alone, which blocks idle sleep.
 
 ## Build
 

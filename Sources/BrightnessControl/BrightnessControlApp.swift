@@ -4,25 +4,30 @@ import SwiftUI
 @main
 struct BrightnessControlApp: App {
     @State private var model = BrightnessModel()
+    @State private var keepAwake = KeepAwake()
 
     var body: some Scene {
         MenuBarExtra {
-            BrightnessPanel(model: model)
+            BrightnessPanel(model: model, keepAwake: keepAwake)
         } label: {
-            Image(nsImage: MenuBarIcon.image)
+            Image(nsImage: keepAwake.isOn ? MenuBarIcon.awakeImage : MenuBarIcon.image)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// The display's brightness, then launch at login and quit, straight on the menu bar panel's glass.
+/// The display's brightness, keep awake, then launch at login and quit, straight on the menu bar panel's glass.
 struct BrightnessPanel: View {
     @Bindable var model: BrightnessModel
+    @Bindable var keepAwake: KeepAwake
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             display
             appearancePicker
+            Divider()
+            keepAwakeSection
+            Divider()
             HStack {
                 loginToggle
                 Spacer()
@@ -78,6 +83,56 @@ struct BrightnessPanel: View {
         .buttonSizing(.flexible)
     }
 
+    private var keepAwakeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Keep Awake").font(.headline)
+                    Text(keepAwakeStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Toggle("Keep Awake", isOn: Binding(
+                    get: { keepAwake.isOn },
+                    set: { keepAwake.setOn($0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .labelsHidden()
+            }
+
+            Picker("Stay awake", selection: $keepAwake.target) {
+                ForEach(AwakeTarget.allCases) { target in
+                    Text(target.title).tag(target)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .buttonSizing(.flexible)
+
+            Slider(value: $keepAwake.hours, in: KeepAwake.hoursRange, step: 1) {
+                Text("Duration")
+            } currentValueLabel: {
+                EmptyView()
+            } minimumValueLabel: {
+                Text("1 h")
+            } maximumValueLabel: {
+                Text("12 h")
+            } tick: { value in
+                SliderTick(value)
+            }
+            .labelsHidden()
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var keepAwakeStatus: String {
+        guard let endsAt = keepAwake.endsAt else { return "Off" }
+        return "\(Int(keepAwake.hours)) h, until \(endsAt.formatted(date: .omitted, time: .shortened))"
+    }
+
     private var loginToggle: some View {
         Toggle("Open at Login", isOn: Binding(
             get: { model.launchesAtLogin },
@@ -103,9 +158,13 @@ struct BrightnessPanel: View {
     }
 }
 
-/// The menu bar glyph: a half-lit disc with eight rays, drawn as a template image.
+/// The menu bar glyph: a disc with eight rays, drawn as a template image. The disc is half lit,
+/// and fully lit while keep awake is on.
 enum MenuBarIcon {
-    static let image: NSImage = {
+    static let image = make(fullyLit: false)
+    static let awakeImage = make(fullyLit: true)
+
+    private static func make(fullyLit: Bool) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
             let center = NSPoint(x: rect.midX, y: rect.midY)
             NSColor.black.set()
@@ -114,7 +173,7 @@ enum MenuBarIcon {
             disc.lineWidth = 1.5
             disc.stroke()
             let lit = NSBezierPath()
-            lit.appendArc(withCenter: center, radius: 4, startAngle: 90, endAngle: 270, clockwise: false)
+            lit.appendArc(withCenter: center, radius: 4, startAngle: 90, endAngle: fullyLit ? 450 : 270, clockwise: false)
             lit.close()
             lit.fill()
 
@@ -130,7 +189,7 @@ enum MenuBarIcon {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Brightness"
+        image.accessibilityDescription = fullyLit ? "Brightness, keeping Mac awake" : "Brightness"
         return image
-    }()
+    }
 }
